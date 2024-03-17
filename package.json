@@ -1,0 +1,33 @@
+{
+  "name": "js-proxy",
+  "version": "0.1.0",
+  "description": "",
+  "main": "./cjs/index.js",
+  "scripts": {
+    "build": "npm run cjs && npm run test",
+    "cjs": "ascjs esm cjs",
+    "coveralls": "c8 report --reporter=text-lcov | coveralls",
+    "test": "c8 node test/index.js"
+  },
+  "keywords": [],
+  "author": "Andrea Giammarchi",
+  "license": "ISC",
+  "devDependencies": {
+    "ascjs": "^6.0.3",
+    "c8": "^9.1.0",
+    "coveralls": "^3.1.1"
+  },
+  "module": "./esm/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./esm/index.js",
+      "default": "./cjs/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "gc-hook": "^0.3.1",
+    "proxy-target": "^3.0.2"
+  }
+}
