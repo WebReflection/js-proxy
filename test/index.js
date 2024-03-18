@@ -1,5 +1,10 @@
 import { typeOf, proxyOf } from '../esm/index.js';
 
+const assert = (current, expected, message = `expected ${expected} - got ${current}`) => {
+  if (!Object.is(current, expected))
+    throw new Error(message);
+};
+
 // 🦄 typeOf coverage related
 let proxied = proxyOf({
   // native cases
@@ -7,14 +12,13 @@ let proxied = proxyOf({
   function: {},
   object: {},
 
-  // extra primitives
+  // custom primitives
   bigint: {
-    get(target, key) {
-      const value = target[key];
-      return typeof value === 'function' ?
-              value.bind(target) : value;
+    get(target, key, ..._) {
+      return key === Symbol.toPrimitive ?
+              () => target.valueOf() :
+              Reflect.get(target, key, ..._);
     },
-    getPrototypeOf: () => BigInt.prototype,
   },
   boolean: {},
   null: {},
@@ -28,31 +32,84 @@ let proxied = proxyOf({
 });
 
 // typeOf native cases
-console.assert(typeOf([]) === 'array');
-console.assert(typeOf(proxied.array(0)) === 'array');
-console.assert(typeOf(()=>{}) === 'function');
-console.assert(typeOf(proxied.function(0)) === 'function');
-console.assert(typeOf({}) === 'object');
-console.assert(typeOf(proxied.object(0)) === 'object');
+assert(typeOf([]), 'array');
+assert(typeOf(proxied.array(0)), 'array');
+assert(typeOf(()=>{}), 'function');
+assert(typeOf(proxied.function(0)), 'function');
+assert(typeOf({}), 'object');
+assert(typeOf(proxied.object(0)), 'object');
 
 // typeOf extra primitives
-console.assert(typeOf(1n) === 'bigint');
-console.assert(typeOf(proxied.bigint(0)) === 'bigint');
-console.assert(typeOf(false) === 'boolean');
-console.assert(typeOf(proxied.boolean(0)) === 'boolean');
-console.assert(typeOf(null) === 'null');
-console.assert(typeOf(proxied.null(0)) === 'null');
-console.assert(typeOf(1) === 'number');
-console.assert(typeOf(proxied.number(0)) === 'number');
-console.assert(typeOf('') === 'string');
-console.assert(typeOf(proxied.string(0)) === 'string');
-console.assert(typeOf(Symbol()) === 'symbol');
-console.assert(typeOf(proxied.symbol(0)) === 'symbol');
-console.assert(typeOf() === 'undefined');
-console.assert(typeOf(proxied.undefined({})) === 'undefined');
+assert(typeOf(1n), 'bigint');
+assert(typeOf(proxied.bigint(0)), 'bigint');
+assert(typeOf(false), 'boolean');
+assert(typeOf(proxied.boolean(0)), 'boolean');
+assert(typeOf(null), 'null');
+assert(typeOf(proxied.null(0)), 'null');
+assert(typeOf(1), 'number');
+assert(typeOf(proxied.number(0)), 'number');
+assert(typeOf(''), 'string');
+assert(typeOf(proxied.string(0)), 'string');
+assert(typeOf(Symbol()), 'symbol');
+assert(typeOf(proxied.symbol(0)), 'symbol');
+assert(typeOf(), 'undefined');
+assert(typeOf(proxied.undefined(0)), 'undefined');
 
 // typeOf custom direct/defined
-console.assert(typeOf(proxied.direct({})) === 'direct');
+assert(typeOf(proxied.direct({})), 'direct');
 
-console.assert(proxied.bigint(2n) == 2n);
-console.assert(proxied.bigint(2n) instanceof BigInt);
+assert(proxied.bigint(2n) == 2n, true, 'bigint');
+assert(proxied.bigint(2n) instanceof BigInt, true, 'bigint instanceof');
+
+// 🦄 proxyOf coverage related
+assert(proxied.array([1, 2, 3]).length, 3);
+assert(proxied.direct([1, 2, 3]).length, 3);
+assert(proxied.object({a: 1}).a, 1);
+assert(proxied.direct({a: 1}).a, 1);
+assert(proxied.function(() => 1)(), 1);
+assert(proxied.direct(() => 1)(), 1);
+
+let i = 0;
+
+const gcdo = Object(1);
+const gcdd = {b: 2};
+
+proxied = proxyOf({
+  object: {
+    destruct(ref) {
+      assert(ref, gcdo.valueOf());
+      i++;
+    }
+  },
+  direct: {
+    destruct(ref) {
+      assert(ref, gcdd);
+      i++;
+    }
+  },
+});
+
+
+let pgcdo = proxied.object(gcdo.valueOf(), gcdo);
+let pgcdd = proxied.direct(gcdd);
+
+setTimeout(() => {
+  pgcdo = pgcdd = null;
+  gc();
+  setTimeout(() => {
+    gc();
+    assert(i, 2);
+    pgcdo = proxied.object(gcdo.valueOf(), gcdo);
+    pgcdd = proxied.direct(gcdd);
+    setTimeout(() => {
+      proxied.free(gcdo);
+      proxied.free(gcdd);
+      gc();
+      setTimeout(() => {
+        gc();
+        assert(i, 2);
+        console.log('OK');
+      }, 100);
+    }, 100);
+  });
+}, 100);

@@ -1,16 +1,15 @@
 import * as handlerTraps from 'proxy-target/traps';
-import * as handlerTypes from 'proxy-target/types';
+
+import { ARRAY, FUNCTION, NULL, OBJECT, UNDEFINED } from 'proxy-target/types';
 import { bound } from 'proxy-target';
 import { create, drop } from 'gc-hook';
 
-const { ARRAY, FUNCTION, NULL, OBJECT } = handlerTypes;
 const { Object, Proxy, Reflect } = globalThis;
 
 const { isArray } = Array;
 const { create: extend, entries, values } = Object;
 
 const traps = new Set([...values(handlerTraps)]);
-const types = new Set([...values(handlerTypes)]);
 const typesOf = new WeakMap;
 
 const extendHandler = (handler, type, value) => {
@@ -20,7 +19,18 @@ const extendHandler = (handler, type, value) => {
   return extend(handler, descriptors);
 };
 
-const proxy = ($, target, handler, token = false) => {
+const proxy = ($, target, handler, token = $) => {
+  if (token === $) {
+    switch (typeof $) {
+      case OBJECT:
+      case FUNCTION:
+      case UNDEFINED: break;
+      default: {
+        token = false;
+        if (target === $) target = Object($);
+      }
+    }
+  }
   const p = new Proxy(target, handler);
   const { destruct } = handler;
   return destruct ? create($, destruct, { token, return: p }) : p;
@@ -58,26 +68,12 @@ export const proxyOf = namespace => {
         break;
       }
       default: {
-        if (types.has(type)) {
-          const handler = extendHandler(traps, type, method => ({
-            value($, ..._) {
-              return method.call(this, $.valueOf(), ..._);
-            }
-          }));
-          proxies[type] = ($, ..._) => {
-            const p = proxy($, Object($), handler, ..._);
-            typesOf.set(p, type);
-            return p;
-          };
-        }
-        else {
-          const handler = extendHandler(traps, type, value => ({ value }));
-          proxies[type] = ($, token = $) => {
-            const p = proxy($, $, handler, token);
-            typesOf.set(p, type);
-            return p;
-          };
-        }
+        const handler = extendHandler(traps, type, value => ({ value }));
+        proxies[type] = ($, ..._) => {
+          const p = proxy($, $, handler, ..._);
+          typesOf.set(p, type);
+          return p;
+        };
         break;
       }
     }
@@ -86,12 +82,13 @@ export const proxyOf = namespace => {
 };
 
 export const typeOf = value => {
-  let type = typeof value;
-  if (type === OBJECT) {
-    type = value === null ?
-      NULL :
-      (isArray(value) ? ARRAY : (typesOf.get(value) || OBJECT))
-    ;
-  }
-  return type;
+  const type = typeof value;
+  return type === OBJECT ?
+    (value ?
+      (typesOf.get(value) || (
+        isArray(value) ? ARRAY : OBJECT
+      )) :
+      NULL
+    ) :
+    type;
 };
