@@ -1,13 +1,15 @@
 import * as handlerTraps from 'proxy-target/traps';
 
 import { ARRAY, FUNCTION, NULL, OBJECT, UNDEFINED } from 'proxy-target/types';
+
 import { bound } from 'proxy-target';
 import { create, drop } from 'gc-hook';
 
 const { Object, Proxy, Reflect } = globalThis;
 
 const { isArray } = Array;
-const { create: extend, entries, values } = Object;
+const { ownKeys } = Reflect;
+const { create: extend, values } = Object;
 
 const traps = new Set([...values(handlerTraps)]);
 const typesOf = new WeakMap;
@@ -38,7 +40,8 @@ const proxy = ($, target, handler, token = $) => {
 
 export const proxyOf = namespace => {
   const proxies = { free: token => drop(token) };
-  for (const [type, traps] of entries(namespace)) {
+  for (const type of ownKeys(namespace)) {
+    const traps = namespace[type];
     switch (type) {
       case ARRAY: {
         const handler = extendHandler(traps, type, method => ({

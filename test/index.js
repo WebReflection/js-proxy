@@ -5,6 +5,16 @@ const assert = (current, expected, message = `expected ${expected} - got ${curre
     throw new Error(message);
 };
 
+const collect = () => {
+  gc();
+  return new Promise(resolve => {
+    setTimeout(() => {
+      gc();
+      resolve();
+    }, 100);
+  });
+};
+
 // 🦄 typeOf coverage related
 let proxied = proxyOf({
   // native cases
@@ -74,10 +84,13 @@ let i = 0;
 const gcdo = Object(1);
 const gcdd = {b: 2};
 
+const hidden = Symbol('direct');
+
 proxied = proxyOf({
   object: {
     destruct(ref) {
       assert(ref, gcdo.valueOf());
+      assert(ref, 1);
       i++;
     }
   },
@@ -87,29 +100,31 @@ proxied = proxyOf({
       i++;
     }
   },
+  [hidden]: {
+    destruct() {
+      i++;
+    }
+  },
 });
 
 
 let pgcdo = proxied.object(gcdo.valueOf(), gcdo);
 let pgcdd = proxied.direct(gcdd);
 
-setTimeout(() => {
-  pgcdo = pgcdd = null;
-  gc();
-  setTimeout(() => {
-    gc();
-    assert(i, 2);
-    pgcdo = proxied.object(gcdo.valueOf(), gcdo);
-    pgcdd = proxied.direct(gcdd);
-    setTimeout(() => {
-      proxied.free(gcdo);
-      proxied.free(gcdd);
-      gc();
-      setTimeout(() => {
-        gc();
-        assert(i, 2);
-        console.log('OK');
-      }, 100);
-    }, 100);
-  });
-}, 100);
+await collect();
+assert(!!pgcdo, true);
+assert(!!pgcdd, true);
+pgcdo = pgcdd = null;
+await collect();
+assert(i, 2);
+pgcdo = proxied.object(gcdo.valueOf(), gcdo);
+pgcdd = proxied.direct(gcdd);
+await collect();
+proxied.free(gcdo);
+proxied.free(gcdd);
+await collect();
+assert(i, 2);
+proxied[hidden]({});
+await collect();
+assert(i, 3);
+console.log('OK');

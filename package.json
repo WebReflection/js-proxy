@@ -1,21 +1,20 @@
 {
   "name": "js-proxy",
   "version": "0.1.0",
-  "description": "",
+  "description": "The one-stop shop solution for JS Proxies and FFI APIs",
   "main": "./cjs/index.js",
   "scripts": {
     "build": "npm run cjs && npm run test",
     "cjs": "ascjs esm cjs",
-    "coveralls": "c8 report --reporter=text-lcov | coveralls",
-    "test": "c8 node --expose-gc test/index.js"
+    "test": "c8 node --expose-gc test/index.js",
+    "coverage": "mkdir -p ./coverage; c8 report --reporter=text-lcov > ./coverage/lcov.info"
   },
-  "keywords": [],
+  "keywords": ["proxy", "ffi", "gc", "destruct"],
   "author": "Andrea Giammarchi",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "ascjs": "^6.0.3",
-    "c8": "^9.1.0",
-    "coveralls": "^3.1.1"
+    "c8": "^9.1.0"
   },
   "module": "./esm/index.js",
   "type": "module",
