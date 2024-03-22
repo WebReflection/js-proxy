@@ -1,19 +1,6 @@
-import { typeOf, proxyOf } from '../esm/index.js';
-
-const assert = (current, expected, message = `expected ${expected} - got ${current}`) => {
-  if (!Object.is(current, expected))
-    throw new Error(message);
-};
-
-const collect = () => {
-  gc();
-  return new Promise(resolve => {
-    setTimeout(() => {
-      gc();
-      resolve();
-    }, 100);
-  });
-};
+import { typeOf, proxyOf, valueOf } from '../esm/index.js';
+import { assert, collect } from './utils.js';
+import './heap.js';
 
 // 🦄 typeOf coverage related
 let proxied = proxyOf({
@@ -48,6 +35,7 @@ assert(typeOf(()=>{}), 'function');
 assert(typeOf(proxied.function(0)), 'function');
 assert(typeOf({}), 'object');
 assert(typeOf(proxied.object(0)), 'object');
+assert(valueOf(proxied.object({})).toString(), '[object Object]');
 
 // typeOf extra primitives
 assert(typeOf(1n), 'bigint');
@@ -103,7 +91,10 @@ proxied = proxyOf({
   [hidden]: {
     destruct() {
       i++;
-    }
+    },
+    valueOf() {
+      return 'anything-really';
+    },
   },
 });
 
@@ -124,7 +115,10 @@ proxied.free(gcdo);
 proxied.free(gcdd);
 await collect();
 assert(i, 2);
-proxied[hidden]({});
+let h = proxied[hidden]({});
+assert(h.valueOf(), h);
+assert(valueOf(h), 'anything-really');
+h = null;
 await collect();
 assert(i, 3);
 console.log('OK');

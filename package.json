@@ -23,6 +23,10 @@
       "import": "./esm/index.js",
       "default": "./cjs/index.js"
     },
+    "./heap": {
+      "import": "./esm/heap.js",
+      "default": "./cjs/heap.js"
+    },
     "./traps": {
       "import": "./esm/traps.js",
       "default": "./cjs/traps.js"
