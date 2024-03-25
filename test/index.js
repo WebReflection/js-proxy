@@ -75,11 +75,24 @@ const gcdd = {b: 2};
 const hidden = Symbol('direct');
 
 proxied = proxyOf({
+  array: {
+    valueOf(i) {
+      return i;
+    }
+  },
+  function: {
+    valueOf(i) {
+      return i;
+    }
+  },
   object: {
     destruct(ref) {
       assert(ref, gcdo.valueOf());
       assert(ref, 1);
       i++;
+    },
+    valueOf(i) {
+      return i;
     }
   },
   direct: {
@@ -103,6 +116,9 @@ let pgcdo = proxied.object(gcdo.valueOf(), gcdo);
 let pgcdd = proxied.direct(gcdd);
 
 await collect();
+assert(valueOf(proxied.array(3)), 3);
+assert(valueOf(proxied.function(2)), 2);
+assert(valueOf(pgcdo), 1);
 assert(!!pgcdo, true);
 assert(!!pgcdd, true);
 pgcdo = pgcdd = null;

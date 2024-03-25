@@ -13,6 +13,14 @@ const traps = new Set([...values(handlerTraps)]);
 const typesOf = new WeakMap;
 const direct = Symbol();
 
+const wrapOf = (ref, type) => (
+  type === ARRAY ? ref[0] : (
+    type === FUNCTION ? ref() : (
+      type === OBJECT ? ref.$ : ref
+    )
+  )
+);
+
 const extendHandler = (handler, type, value) => {
   const descriptors = { type: { value: type } };
   const hasValueOf = hasOwn(handler, 'valueOf');
@@ -24,7 +32,7 @@ const extendHandler = (handler, type, value) => {
       descriptor = {
         value($, s, ..._) {
           return s === direct ?
-            valueOf.call(this, $) :
+            valueOf.call(this, wrapOf($, type)) :
             value.call(this, $, s, ..._);
         }
       };
@@ -57,27 +65,27 @@ export const proxyOf = namespace => {
     const traps = namespace[type];
     switch (type) {
       case ARRAY: {
-        const handler = extendHandler(traps, type, method => ({
+        const handler = extendHandler(traps, type, value => ({
           value([ $ ], ..._) {
-            return method.call(this, $, ..._);
+            return value.call(this, $, ..._);
           }
         }));
         proxies[type] = ($, ..._) => proxy($, [ $ ], handler, ..._);
         break;
       }
       case FUNCTION: {
-        const handler = extendHandler(traps, type, method => ({
+        const handler = extendHandler(traps, type, value => ({
           value($, ..._) {
-            return method.call(this, $(), ..._);
+            return value.call(this, $(), ..._);
           }
         }));
         proxies[type] = ($, ..._) => proxy($, bound($), handler, ..._);
         break;
       }
       case OBJECT: {
-        const handler = extendHandler(traps, type, method => ({
+        const handler = extendHandler(traps, type, value => ({
           value({ $ }, ..._) {
-            return method.call(this, $, ..._);
+            return value.call(this, $, ..._);
           }
         }));
         proxies[type] = ($, ..._) => proxy($, { $ }, handler, ..._);
@@ -107,9 +115,4 @@ export const typeOf = value => {
     type;
 };
 
-/**
- * @template T the value held by the proxy
- * @param {T} value a proxied value or a regular
- * @returns {T}
- */
 export const valueOf = value => (value[direct] || value.valueOf());
