@@ -38,7 +38,7 @@ const extendHandler = (handler, type, direct, value) => {
   return extend(handler, descriptors);
 };
 
-const proxy = ($, target, handler, token = $) => {
+const JSProxy = ($, target, handler, token = $) => {
   if (token === $) {
     switch (typeof $) {
       case OBJECT:
@@ -55,7 +55,7 @@ const proxy = ($, target, handler, token = $) => {
   return destruct ? create($, destruct, { token, return: p }) : p;
 };
 
-const typeFor = typesOf => value => {
+const typeOfFor = typesOf => value => {
   const type = typeof value;
   return type === OBJECT ?
     (value ?
@@ -65,16 +65,20 @@ const typeFor = typesOf => value => {
     type;
 };
 
-export const proxyOf = namespace => {
+const release = token => (drop(token), token);
+
+export default namespace => {
   const typesOf = new WeakMap;
   const direct = Symbol();
-  const proxies = {
-    dropOf: token => drop(token),
-    typeOf: typeFor(typesOf),
+  const proxy = {};
+  const utils = {
+    proxy,
+    release,
+    typeOf: typeOfFor(typesOf),
     valueOf: value => (value[direct] || value.valueOf()),
   };
   for (const type of ownKeys(namespace)) {
-    if (hasOwn(proxies, type)) continue;
+    if (hasOwn(utils, type)) continue;
     const traps = namespace[type];
     switch (type) {
       case ARRAY: {
@@ -83,7 +87,7 @@ export const proxyOf = namespace => {
             return value.call(this, $, ..._);
           }
         }));
-        proxies[type] = ($, ..._) => proxy($, [ $ ], handler, ..._);
+        proxy[type] = ($, ..._) => JSProxy($, [ $ ], handler, ..._);
         break;
       }
       case FUNCTION: {
@@ -92,7 +96,7 @@ export const proxyOf = namespace => {
             return value.call(this, $(), ..._);
           }
         }));
-        proxies[type] = ($, ..._) => proxy($, bound($), handler, ..._);
+        proxy[type] = ($, ..._) => JSProxy($, bound($), handler, ..._);
         break;
       }
       case OBJECT: {
@@ -101,15 +105,15 @@ export const proxyOf = namespace => {
             return value.call(this, $, ..._);
           }
         }));
-        proxies[type] = ($, ..._) => proxy($, { $ }, handler, ..._);
+        proxy[type] = ($, ..._) => JSProxy($, { $ }, handler, ..._);
         break;
       }
       default: {
         const handler = extendHandler(traps, type, direct, value => ({
           value
         }));
-        proxies[type] = ($, ..._) => {
-          const p = proxy($, $, handler, ..._);
+        proxy[type] = ($, ..._) => {
+          const p = JSProxy($, $, handler, ..._);
           typesOf.set(p, type);
           return p;
         };
@@ -117,5 +121,5 @@ export const proxyOf = namespace => {
       }
     }
   }
-  return proxies;
+  return utils;
 };

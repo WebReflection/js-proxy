@@ -2,40 +2,45 @@
 
 <sup>**Social Media Photo by [Vinu T](https://unsplash.com/@happy_pixel?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash) on [Unsplash](https://unsplash.com/photos/a-small-waterfall-in-the-middle-of-a-forest-DHo1nNUI0y4?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash)**</sup>
 
-The one-stop shop solution for JS Proxies and FFI APIs.
+The "*one-stop shop*" solution for JS Proxies and FFI APIs.
 
 **[Documentation](https://webreflection.github.io/js-proxy/)**
 
+
 ## API
 
-<details id="proxy-of" open>
-  <summary><strong style="font-size:1.5rem">proxyOf(namespace)</strong></summary>
+<details id="define" open>
+  <summary><strong style="font-size:1.5rem"><code>&nbsp;define(namespace):jsProxy&nbsp;</code></strong></summary>
   <div markdown=1>
 
-This export provides an utility to define various handlers for any kind of proxied value.
+The default export provides an utility to define various handlers for any kind of proxied value and returns a [jsProxy](#jsproxy) object literal.
 
 Each handler can have zero, one or more [proxy traps](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/Proxy#handler_functions) *plus* the following extra handlers:
 
   * **destruct** which, if present, will orchestrate automatically a [FinalizationRegistry](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry) logic to invoke such trap once its proxied value is not used anymore in the wild.
   * **valueOf** which, if present, allows the `valueOf(proxy)` utility to retrieve directly the underlying proxied value.
 
-> 📝 **Important**
+> ℹ️ **Important**
 > 
 > If the namespace contains `object`, `array`, or `function` as own entries the value can be either a reference to those types or actually a number or any other primitive which goal is to reflect proxies across worlds (boundaries, workers, realms, interpreters).
 > 
+> In case those references are primitives it is mandatory to define all native traps otherwise the `Reflect` methods would fail at dealing with numbers, strings, or any other kind of primitive.
+> 
 > Any other name will simply directly accept references, but not primitives, still providing the special methods that are indeed available to every type of proxy.
 
-<h3>Example</h3>
+<h4>Example</h4>
 
 ```js
-import { proxyOf, valueOf, typeOf } from 'js-proxy';
+import define from 'js-proxy';
 
-const proxiedValue = proxiedValue => proxiedValue;
+// simply returns whatever value is received
+const identity = value => value;
 
-const proxy = proxyOf({
-  object: { valueOf: proxiedValue },
-  array: { valueOf: proxiedValue },
-  function: { valueOf: proxiedValue },
+// te jsProxy is an object with these fields / utilities:
+const { proxy, release, typeOf, valueOf } = define({
+  object: { valueOf: identity },
+  array: { valueOf: identity },
+  function: { valueOf: identity },
   direct: {
     destruct(ref) {
       console.log('this reference is no longer needed', ref);
@@ -46,9 +51,9 @@ const proxy = proxyOf({
 // object, array and function always act
 // like proxies and values for objects, arrays or functions
 // any other namespace entry uses directly the referenced value.
-const object = proxy.object([]);
-const array = proxy.array({});
-const fn = proxy.function(123);
+const object = proxy.object([]);  // still an object
+const array = proxy.array({});    // still an array
+const fn = proxy.function(123);   // still a function
 
 let any = proxy.direct({});
 
@@ -70,36 +75,184 @@ any = null;
 // "this reference is no longer needed", {}
 ```
 
-The reason for `object`, `array`, and `function` to have a special treatment is the fact both `typeof` and `Array.isArray` can actually drill into the proxied type so that this module guarantees that if you meant to proxy an *array* or a *function*, these will reflect their entity across introspection related operations, also providing a way to simply proxy memory addresses or any other kind of identity, and deal with [Foregn Function Interfaces](https://en.wikipedia.org/wiki/Foreign_function_interface) for non *JS* related programming languages.
+The reason for `object`, `array`, and `function` to have a special treatment is the fact both `typeof` and `Array.isArray` can actually drill into the proxied type so that this module guarantees that if you meant to proxy an *array* or a *function*, these will reflect their entity across introspection related operations, also providing a way to simply proxy memory addresses or any other kind of identity, and deal with [Foreign Function Interfaces](https://en.wikipedia.org/wiki/Foreign_function_interface) for non *JS* related programming languages.
 
   </div>
 </details>
 
-<details id="type-of" open>
-  <summary><strong style="font-size:1.5rem">typeOf(unknown)</strong></summary>
+
+## jsProxy
+
+<details id="js-proxy-proxy" open>
+  <summary><strong style="font-size:1.5rem"><code>&nbsp;jsProxy.proxy.type(value, ...rest)&nbsp;</code></strong></summary>
   <div markdown=1>
 
-Differently from the [typeof operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof), the `typeOf` in this module does the following:
+The `proxy` literal will contain all defined proxy types able to bootstrap related proxies directly.
+
+The definition can contain any valid object literal key, including symbols.
+
+<h4>Example</h4>
+
+```js
+import define from 'js-proxy';
+
+const secret = Symbol('secret');
+
+const { proxy } = define({
+  object: {
+    // ... one or more traps ...
+  },
+  custom: {
+    // ... one or more traps ...
+  },
+  [secret]: {
+    // ... one or more traps ...
+  },
+});
+
+// create 3 different proxies
+proxy.object({});   // typeOf(...) === "object"
+proxy.custom({});   // typeOf(...) === "custom"
+proxy[secret]({});  // typeOf(...) === secret
+```
+
+<h4 id="dealing-with-primitives">Dealing with primitives</h4>
+
+The `proxy` namespace is able to bootstrap even primitives but with the following constraints:
+
+  * at least common traps must be well defined otherwise the *Reflect* fallback might fail
+  * if passed as primitive, the value will be proxied automatically as an `Object(primitive)` and there won't be any way to `release(primitive)` later on
+  * if passed as reference, it's still needed to define common traps
+
+<h4>Example</h4>
+
+```js
+import define from 'js-proxy';
+
+const { proxy, release } = define({
+  string: {
+    get(str, key) {
+      const value = str[key];
+      return typeof value === 'function' ?
+              value.bind(str) : value;
+    },
+    destruct(str) {
+      console.log(`wrap for ${str} released`);
+    },
+  },
+});
+
+// works but release won't be effective
+proxy.string('test').slice(0, 1); // "t"
+release('test'); // ⚠️ WRONG
+// throws: Invalid unregisterToken ('test')
+
+// this works better and it's possible to release
+const wrap = Object('test'); // new String('test')
+proxy.string(wrap).slice(0, 1);
+release(wrap);  // 👍 OK
+// destruct trap won't ever be invoked
+```
+
+<h4 id="dealing-with-foreing-pl">Dealing with foreign programming languages</h4>
+
+Usually most primitive types are exchanged as such in the *ForeignPL* to *JS* world, so that numbers are converted, boolean are converted, strings are (likely) converted (but they don't really need to be) but objects, arrays, and functions cannot really be converted retaining their reference in the *ForeignPL* counterpart.
+
+If it's desired to both deal with these cases and have a way to `release(token)` later on, there are at least two different approaches:
+
+  * wrap that primitive identifier as object itself such as `{_ref: 123}`, requiring for each trap to extract that `_ref` each time
+  * retain the token a part, passing it as second proxy argument
+
+It is really up to you how you prefer handling references to your current *foreign PL* but at least there are a couple of options.
+
+<h4>Example</h4>
+
+```js
+import define from 'js-proxy';
+
+const { proxy, release } = define({
+  object: {
+    destruct(ref) {
+      // {_ref: 123} in case No.1
+      // 456 in case No.2
+      console.log(ref, 'proxy is gone');
+    },
+  },
+});
+
+// case No.1
+const trapped1 = {_ref: 123};
+let proxied1 = proxy.object(trapped1);
+setTimeout(release, 1000, trapped1);
+
+// case No.2
+const trapped2 = 456;
+const token2 = Object(456);
+let proxied2 = proxy.object(trapped2, token2);
+setTimeout(release, 1000, token2);
+```
+
+  </div>
+</details>
+
+<details id="js-proxy-release" open>
+  <summary><strong style="font-size:1.5rem"><code>&nbsp;jsProxy.release(token)&nbsp;</code></strong></summary>
+  <div markdown=1>
+
+This utility is particularly handy for *FFI* related use cases or whenever an explicit `destroy()` or `destruct()` method is meant by the code that provides the proxy.
+
+When the token is known and released, the `destruct` trap won't happen again, effectively avoiding double invokes of potentially the same procedure.
+
+The `token` reference is, by default, the same proxied object so that it's easy behind the scene to hold it internally and eventually procedurally release that reference from the garbage collector.
+
+Use cases could be a terminated worker that was holding delivered proxies or users defined explicit actions to signal some reference is not needed anymore and won't be accessed again.
+
+<h4>Example</h4>
+
+```js
+import define from 'js-proxy';
+
+const { proxy, release } = define({
+  direct: {
+    destruct(ref) {
+      console.log(ref, 'not used anymore');
+    }
+  }
+});
+
+const myRef = {ref: 123};
+const outProxy = proxy.direct(myRef);
+
+// any time later we want to drop myRef on GC
+release(myRef);
+```
+
+  </div>
+</details>
+
+<details id="js-proxy-type-of" open>
+  <summary><strong style="font-size:1.5rem"><code>&nbsp;jsProxy.typeOf(unknown)&nbsp;</code></strong></summary>
+  <div markdown=1>
+
+Differently from the [typeof operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof), the `typeOf` utility does the following:
 
   * it retrieves the current `typeof` of the generic, *unknown*, value
   * if the resulting *type* is `"object"`:
     * if the namespace had such type defined in it, it returns that brand name instead
     * if the value is an *array*, it returns `"array"`
     * if the value is `null`, it returns `"null"`
-  * otherwise returns the string that `typeof` initially returned
+  * otherwise returns the string that `typeof` originally returned
 
 > ℹ️ **Note**
 > 
-> This utility is not necessarily just handy with this module but it's especially handy to branch out specific proxies handlers and behavior whenever the type of proxy is known in the namespace.
+> This utility is not necessarily that useful with this module but it's especially handy to branch out specific proxies handlers and behavior whenever the type of proxy is known in the namespace.
 
-<h3>Example</h3>
+<h4>Example</h4>
 
 ```js
-import { proxyOf, typeOf } from 'js-proxy';
+import define from 'js-proxy';
 
-const proxiedValue = proxiedValue => proxiedValue;
-
-const proxy = proxyOf({
+const { proxy, typeOf } = define({
   object: {},
   string: {},
   promise: {},
@@ -114,18 +267,47 @@ typeOf(object) === "object";
 typeOf(str) === "string";
 typeOf(promise) === "promise";
 ```
+
   </div>
 </details>
 
-<details id="value-of" open>
-  <summary><strong style="font-size:1.5rem">valueOf(unknown)</strong></summary>
+<details id="js-proxy-value-of" open>
+  <summary><strong style="font-size:1.5rem"><code>&nbsp;jsProxy.valueOf(unknown)&nbsp;</code></strong></summary>
   <div markdown=1>
 
-This utility retrieves the value from any proxy type that has been defined.
+If a defined proxy handler has its own `valueOf` trap, this utility will call that trap directly and return whatever that method decided to return.
 
-It's literally a transparent *pass through* operation when proxies have been defined via this library that can be handy whenever the underlying original data is meant to be retrieved.
+It's literally a transparent *pass through* operation that will not involve native traps.
 
-This utility simply does a `ref.valueOf()` fallback for any other value unknown to the created proxies.
+If the handler did not provide its own `valueOf` trap, this utility simply perform a `ref.valueOf()` operation.
+
+<h4>Example</h4>
+
+```js
+import define from 'js-proxy';
+
+const identity = value => value;
+
+const { proxy, valueOf } = define({
+  object: {
+    valueOf: identity,
+  },
+  direct: {
+    valueOf: identity,
+  },
+  unknown: {},
+});
+
+const object = proxy.object(123);
+const array = [1, 2, 3];
+const direct = proxy.direct(array);
+const unknown = proxy.unknown([4, 5, 6]);
+
+// all true
+valueOf(object) === 123;
+valueOf(direct) === array;
+valueOf(unknown) === unknown;
+```
 
   </div>
 </details>

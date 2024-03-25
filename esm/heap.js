@@ -9,7 +9,7 @@ const values = new Map;
  * @param {number | unknown} id the held value by id or the value itself.
  * @returns {boolean} `true` if the operation was successful, `false` otherwise.
  */
-export const free = id => {
+export const drop = id => {
   const [a, b] = typeof id === NUMBER ? [values, ids] : [ids, values];
   const had = a.has(id);
   if (had) {
