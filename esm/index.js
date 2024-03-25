@@ -9,10 +9,6 @@ const { isArray } = Array;
 const { ownKeys } = Reflect;
 const { create: extend, hasOwn, values } = Object;
 
-const traps = new Set([...values(handlerTraps)]);
-const typesOf = new WeakMap;
-const direct = Symbol();
-
 const wrapOf = (ref, type) => (
   type === ARRAY ? ref[0] : (
     type === FUNCTION ? ref() : (
@@ -21,10 +17,10 @@ const wrapOf = (ref, type) => (
   )
 );
 
-const extendHandler = (handler, type, value) => {
+const extendHandler = (handler, type, direct, value) => {
   const descriptors = { type: { value: type } };
   const hasValueOf = hasOwn(handler, 'valueOf');
-  for(const trap of traps) {
+  for(const trap of values(handlerTraps)) {
     let descriptor = value(handler[trap] || Reflect[trap]);
     if (hasValueOf && trap === handlerTraps.GET) {
       const { valueOf } = handler;
@@ -59,13 +55,30 @@ const proxy = ($, target, handler, token = $) => {
   return destruct ? create($, destruct, { token, return: p }) : p;
 };
 
+const typeFor = typesOf => value => {
+  const type = typeof value;
+  return type === OBJECT ?
+    (value ?
+      (typesOf.get(value) || (isArray(value) ? ARRAY : OBJECT)) :
+      NULL
+    ) :
+    type;
+};
+
 export const proxyOf = namespace => {
-  const proxies = { free: token => drop(token) };
+  const typesOf = new WeakMap;
+  const direct = Symbol();
+  const proxies = {
+    dropOf: token => drop(token),
+    typeOf: typeFor(typesOf),
+    valueOf: value => (value[direct] || value.valueOf()),
+  };
   for (const type of ownKeys(namespace)) {
+    if (hasOwn(proxies, type)) continue;
     const traps = namespace[type];
     switch (type) {
       case ARRAY: {
-        const handler = extendHandler(traps, type, value => ({
+        const handler = extendHandler(traps, type, direct, value => ({
           value([ $ ], ..._) {
             return value.call(this, $, ..._);
           }
@@ -74,7 +87,7 @@ export const proxyOf = namespace => {
         break;
       }
       case FUNCTION: {
-        const handler = extendHandler(traps, type, value => ({
+        const handler = extendHandler(traps, type, direct, value => ({
           value($, ..._) {
             return value.call(this, $(), ..._);
           }
@@ -83,7 +96,7 @@ export const proxyOf = namespace => {
         break;
       }
       case OBJECT: {
-        const handler = extendHandler(traps, type, value => ({
+        const handler = extendHandler(traps, type, direct, value => ({
           value({ $ }, ..._) {
             return value.call(this, $, ..._);
           }
@@ -92,7 +105,9 @@ export const proxyOf = namespace => {
         break;
       }
       default: {
-        const handler = extendHandler(traps, type, value => ({ value }));
+        const handler = extendHandler(traps, type, direct, value => ({
+          value
+        }));
         proxies[type] = ($, ..._) => {
           const p = proxy($, $, handler, ..._);
           typesOf.set(p, type);
@@ -104,15 +119,3 @@ export const proxyOf = namespace => {
   }
   return proxies;
 };
-
-export const typeOf = value => {
-  const type = typeof value;
-  return type === OBJECT ?
-    (value ?
-      (typesOf.get(value) || (isArray(value) ? ARRAY : OBJECT)) :
-      NULL
-    ) :
-    type;
-};
-
-export const valueOf = value => (value[direct] || value.valueOf());

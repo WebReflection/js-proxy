@@ -116,3 +116,16 @@ typeOf(promise) === "promise";
 ```
   </div>
 </details>
+
+<details id="value-of" open>
+  <summary><strong style="font-size:1.5rem">valueOf(unknown)</strong></summary>
+  <div markdown=1>
+
+This utility retrieves the value from any proxy type that has been defined.
+
+It's literally a transparent *pass through* operation when proxies have been defined via this library that can be handy whenever the underlying original data is meant to be retrieved.
+
+This utility simply does a `ref.valueOf()` fallback for any other value unknown to the created proxies.
+
+  </div>
+</details>

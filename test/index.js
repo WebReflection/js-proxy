@@ -1,4 +1,4 @@
-import { typeOf, proxyOf, valueOf } from '../esm/index.js';
+import { proxyOf } from '../esm/index.js';
 import { assert, collect } from './utils.js';
 import './heap.js';
 
@@ -26,7 +26,12 @@ let proxied = proxyOf({
 
   // custom direct/defined
   direct: {},
+
+  // simply ignored ...
+  valueOf: {},
 });
+
+let { dropOf, typeOf, valueOf } = proxied;
 
 // typeOf native cases
 assert(typeOf([]), 'array');
@@ -111,6 +116,8 @@ proxied = proxyOf({
   },
 });
 
+({ dropOf, typeOf, valueOf } = proxied);
+
 
 let pgcdo = proxied.object(gcdo.valueOf(), gcdo);
 let pgcdd = proxied.direct(gcdd);
@@ -127,8 +134,8 @@ assert(i, 2);
 pgcdo = proxied.object(gcdo.valueOf(), gcdo);
 pgcdd = proxied.direct(gcdd);
 await collect();
-proxied.free(gcdo);
-proxied.free(gcdd);
+proxied.dropOf(gcdo);
+proxied.dropOf(gcdd);
 await collect();
 assert(i, 2);
 let h = proxied[hidden]({});

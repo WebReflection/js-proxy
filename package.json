@@ -5,7 +5,7 @@
   "main": "./cjs/index.js",
   "scripts": {
     "build": "npm run cjs && npm run test",
-    "cjs": "ascjs esm cjs",
+    "cjs": "ascjs --no-default esm cjs",
     "test": "c8 node --expose-gc test/index.js",
     "coverage": "mkdir -p ./coverage; c8 report --reporter=text-lcov > ./coverage/lcov.info"
   },
