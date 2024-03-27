@@ -1,6 +1,6 @@
 import { NUMBER } from 'proxy-target/types';
 
-let id = 0;
+let uid = 0;
 const ids = new Map;
 const values = new Map;
 
@@ -32,14 +32,14 @@ export const get = id => values.get(id);
  * @returns {number} a unique identifier for that reference.
  */
 export const hold = value => {
-  if (!values.has(value)) {
-    let sid;
+  if (!ids.has(value)) {
+    let id;
     // a bit apocalyptic scenario but if this thread runs forever
     // and the id does a whole int32 roundtrip we might have still
     // some reference dangling around
-    while (/* c8 ignore next */ values.has(sid = id++));
-    ids.set(value, sid);
-    values.set(sid, value);
+    while (/* c8 ignore next */ values.has(id = uid++));
+    ids.set(value, id);
+    values.set(id, value);
   }
   return ids.get(value);
 };

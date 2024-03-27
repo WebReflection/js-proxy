@@ -6,6 +6,11 @@ The "*one-stop shop*" solution for JS Proxies and FFI APIs.
 
 **[Documentation](https://webreflection.github.io/js-proxy/)**
 
+### Table of content
+
+  * [API](#api) that describes the default exported utility
+  * [jsProxy](#jsproxy) that describes the namespace returned by the utility
+  * [Heap](#heap) that describes what `js-proxy/heap` exports as extra utility
 
 ## API
 
@@ -311,3 +316,42 @@ valueOf(unknown) === unknown;
 
   </div>
 </details>
+
+
+## Heap
+
+As extra utility, the `js-proxy/heap` exports is particularly useful for cross realm *JS* proxied interactions.
+
+As example, if your worker, or your main, would like to expose a reference to another worker or main thread, it is possible to associate the current reference to a unique identifier that can then be destroyed once the other world won't need it anymore.
+
+<h4>Example</h4>
+
+```js
+import { drop, get, hold } from 'js-proxy/heap';
+
+let thisWorldReference = {};
+
+// traps forever the reference until drop
+let refID = hold(thisWorldReference);
+// it's always unique by reference
+// hold(thisWorldReference) === hold(thisWorldReference)
+
+postMessage({ type: 'object', value: refID });
+
+addEventListener('message', ({ data }) => {
+  const { value, trap, args } = data;
+  // drop the reference, not needed out there anymore
+  if (trap === 'destruct') {
+    drop(value);
+  }
+  else {
+    // retrieve the original reference by id
+    const ref = get(value);
+    postMessage(Reflect[trap](ref, ...args));
+  }
+});
+```
+
+In the outer world, the `proxy.object({_ref: value})` could forward back via `postMessage` all traps, including the `destruct` when it happens, so that the worker can apply and reply with the result.
+
+As summary, this export helps relating any reference to a unique identifier and it holds such reference until it's dropped. This is particularly useful to avoid the current realm collecting that reference, as it might be used solely in the outer world, still enabling, via `destruct` ability, to free memory on occasion.

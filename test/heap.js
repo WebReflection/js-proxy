@@ -6,6 +6,8 @@ let o = {};
 let id = hold(o);
 
 assert(typeof id, 'number');
+assert(id, hold(o));
+assert(hold(o), hold(o));
 await collect();
 assert(get(id), o);
 
