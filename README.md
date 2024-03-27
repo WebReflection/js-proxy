@@ -6,17 +6,19 @@ The "*one-stop shop*" solution for JS Proxies and FFI APIs.
 
 **[Documentation](https://webreflection.github.io/js-proxy/)**
 
+- - -
+
 ### Table of content
 
-  * [API](#api) that describes the default exported utility
-  * [jsProxy](#jsproxy) that describes the namespace returned by the utility
-  * [Heap](#heap) that describes what `js-proxy/heap` exports as extra utility
+  * **[API](#api)** that describes the default exported utility
+  * **[jsProxy](#jsproxy)** that describes the namespace returned by the utility
+  * **[Heap](#heap)** that describes what `js-proxy/heap` exports as extra utility
+  * **[Traps](#traps)** that describes what `js-proxy/traps` exports
+  * **[Types](#types)** that describes what `js-proxy/types` exports
 
 ## API
 
-<details id="define" open>
-  <summary><strong style="font-size:1.5rem"><code>&nbsp;define(namespace):jsProxy&nbsp;</code></strong></summary>
-  <div markdown=1>
+### `define(namespace):jsProxy`
 
 The default export provides an utility to define various handlers for any kind of proxied value and returns a [jsProxy](#jsproxy) object literal.
 
@@ -25,7 +27,7 @@ Each handler can have zero, one or more [proxy traps](https://developer.mozilla.
   * **destruct** which, if present, will orchestrate automatically a [FinalizationRegistry](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/FinalizationRegistry) logic to invoke such trap once its proxied value is not used anymore in the wild.
   * **valueOf** which, if present, allows the `valueOf(proxy)` utility to retrieve directly the underlying proxied value.
 
-> ℹ️ **Important**
+> [!Important]
 > 
 > If the namespace contains `object`, `array`, or `function` as own entries the value can be either a reference to those types or actually a number or any other primitive which goal is to reflect proxies across worlds (boundaries, workers, realms, interpreters).
 > 
@@ -33,7 +35,7 @@ Each handler can have zero, one or more [proxy traps](https://developer.mozilla.
 > 
 > Any other name will simply directly accept references, but not primitives, still providing the special methods that are indeed available to every type of proxy.
 
-<h4>Example</h4>
+#### Example
 
 ```js
 import define from 'js-proxy';
@@ -82,15 +84,10 @@ any = null;
 
 The reason for `object`, `array`, and `function` to have a special treatment is the fact both `typeof` and `Array.isArray` can actually drill into the proxied type so that this module guarantees that if you meant to proxy an *array* or a *function*, these will reflect their entity across introspection related operations, also providing a way to simply proxy memory addresses or any other kind of identity, and deal with [Foreign Function Interfaces](https://en.wikipedia.org/wiki/Foreign_function_interface) for non *JS* related programming languages.
 
-  </div>
-</details>
-
 
 ## jsProxy
 
-<details id="js-proxy-proxy" open>
-  <summary><strong style="font-size:1.5rem"><code>&nbsp;jsProxy.proxy.type(value, ...rest)&nbsp;</code></strong></summary>
-  <div markdown=1>
+### `jsProxy.proxy.type(value, ...rest)`
 
 The `proxy` literal will contain all defined proxy types able to bootstrap related proxies directly.
 
@@ -121,7 +118,7 @@ proxy.custom({});   // typeOf(...) === "custom"
 proxy[secret]({});  // typeOf(...) === secret
 ```
 
-<h4 id="dealing-with-primitives">Dealing with primitives</h4>
+#### Dealing with primitives
 
 The `proxy` namespace is able to bootstrap even primitives but with the following constraints:
 
@@ -129,7 +126,7 @@ The `proxy` namespace is able to bootstrap even primitives but with the followin
   * if passed as primitive, the value will be proxied automatically as an `Object(primitive)` and there won't be any way to `release(primitive)` later on
   * if passed as reference, it's still needed to define common traps
 
-<h4>Example</h4>
+#### Example
 
 ```js
 import define from 'js-proxy';
@@ -159,7 +156,7 @@ release(wrap);  // 👍 OK
 // destruct trap won't ever be invoked
 ```
 
-<h4 id="dealing-with-foreing-pl">Dealing with foreign programming languages</h4>
+#### Dealing with foreign programming languages
 
 Usually most primitive types are exchanged as such in the *ForeignPL* to *JS* world, so that numbers are converted, boolean are converted, strings are (likely) converted (but they don't really need to be) but objects, arrays, and functions cannot really be converted retaining their reference in the *ForeignPL* counterpart.
 
@@ -170,7 +167,7 @@ If it's desired to both deal with these cases and have a way to `release(token)`
 
 It is really up to you how you prefer handling references to your current *foreign PL* but at least there are a couple of options.
 
-<h4>Example</h4>
+#### Example
 
 ```js
 import define from 'js-proxy';
@@ -197,12 +194,7 @@ let proxied2 = proxy.object(trapped2, token2);
 setTimeout(release, 1000, token2);
 ```
 
-  </div>
-</details>
-
-<details id="js-proxy-release" open>
-  <summary><strong style="font-size:1.5rem"><code>&nbsp;jsProxy.release(token)&nbsp;</code></strong></summary>
-  <div markdown=1>
+### `jsProxy.release(token)`
 
 This utility is particularly handy for *FFI* related use cases or whenever an explicit `destroy()` or `destruct()` method is meant by the code that provides the proxy.
 
@@ -212,7 +204,7 @@ The `token` reference is, by default, the same proxied object so that it's easy 
 
 Use cases could be a terminated worker that was holding delivered proxies or users defined explicit actions to signal some reference is not needed anymore and won't be accessed again.
 
-<h4>Example</h4>
+#### Example
 
 ```js
 import define from 'js-proxy';
@@ -232,12 +224,7 @@ const outProxy = proxy.direct(myRef);
 release(myRef);
 ```
 
-  </div>
-</details>
-
-<details id="js-proxy-type-of" open>
-  <summary><strong style="font-size:1.5rem"><code>&nbsp;jsProxy.typeOf(unknown)&nbsp;</code></strong></summary>
-  <div markdown=1>
+### `jsProxy.typeOf(unknown)`
 
 Differently from the [typeof operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof), the `typeOf` utility does the following:
 
@@ -248,11 +235,11 @@ Differently from the [typeof operator](https://developer.mozilla.org/en-US/docs/
     * if the value is `null`, it returns `"null"`
   * otherwise returns the string that `typeof` originally returned
 
-> ℹ️ **Note**
+> [!Note]
 > 
 > This utility is not necessarily that useful with this module but it's especially handy to branch out specific proxies handlers and behavior whenever the type of proxy is known in the namespace.
 
-<h4>Example</h4>
+#### Example
 
 ```js
 import define from 'js-proxy';
@@ -273,12 +260,8 @@ typeOf(str) === "string";
 typeOf(promise) === "promise";
 ```
 
-  </div>
-</details>
 
-<details id="js-proxy-value-of" open>
-  <summary><strong style="font-size:1.5rem"><code>&nbsp;jsProxy.valueOf(unknown)&nbsp;</code></strong></summary>
-  <div markdown=1>
+### `jsProxy.valueOf(unknown)`
 
 If a defined proxy handler has its own `valueOf` trap, this utility will call that trap directly and return whatever that method decided to return.
 
@@ -286,7 +269,7 @@ It's literally a transparent *pass through* operation that will not involve nati
 
 If the handler did not provide its own `valueOf` trap, this utility simply perform a `ref.valueOf()` operation.
 
-<h4>Example</h4>
+#### Example
 
 ```js
 import define from 'js-proxy';
@@ -314,17 +297,13 @@ valueOf(direct) === array;
 valueOf(unknown) === unknown;
 ```
 
-  </div>
-</details>
-
-
 ## Heap
 
 As extra utility, the `js-proxy/heap` exports is particularly useful for cross realm *JS* proxied interactions.
 
 As example, if your worker, or your main, would like to expose a reference to another worker or main thread, it is possible to associate the current reference to a unique identifier that can then be destroyed once the other world won't need it anymore.
 
-<h4>Example</h4>
+#### Example
 
 ```js
 import { drop, get, hold } from 'js-proxy/heap';
@@ -355,3 +334,47 @@ addEventListener('message', ({ data }) => {
 In the outer world, the `proxy.object({_ref: value})` could forward back via `postMessage` all traps, including the `destruct` when it happens, so that the worker can apply and reply with the result.
 
 As summary, this export helps relating any reference to a unique identifier and it holds such reference until it's dropped. This is particularly useful to avoid the current realm collecting that reference, as it might be used solely in the outer world, still enabling, via `destruct` ability, to free memory on occasion.
+
+
+## Traps
+
+The `js-proxy/traps` exports the following:
+
+```js
+// Standard Proxy Traps
+export const APPLY                        = 'apply';
+export const CONSTRUCT                    = 'construct';
+export const DEFINE_PROPERTY              = 'defineProperty';
+export const DELETE_PROPERTY              = 'deleteProperty';
+export const GET                          = 'get';
+export const GET_OWN_PROPERTY_DESCRIPTOR  = 'getOwnPropertyDescriptor';
+export const GET_PROTOTYPE_OF             = 'getPrototypeOf';
+export const HAS                          = 'has';
+export const IS_EXTENSIBLE                = 'isExtensible';
+export const OWN_KEYS                     = 'ownKeys';
+export const PREVENT_EXTENSION            = 'preventExtensions';
+export const SET                          = 'set';
+export const SET_PROTOTYPE_OF             = 'setPrototypeOf';
+
+// Custom (JS)Proxy Traps
+export const DESTRUCT                     = 'destruct';
+export const VALUE_OF                     = 'valueOf';
+```
+
+
+## Types
+
+The `js-proxy/types` exports the following:
+
+```js
+export const ARRAY     = 'array';
+export const BIGINT    = 'bigint';
+export const BOOLEAN   = 'boolean';
+export const FUNCTION  = 'function';
+export const NULL      = 'null';
+export const NUMBER    = 'number';
+export const OBJECT    = 'object';
+export const STRING    = 'string';
+export const SYMBOL    = 'symbol';
+export const UNDEFINED = 'undefined';
+```
