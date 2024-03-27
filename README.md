@@ -6,11 +6,13 @@ The "*one-stop shop*" solution for JS Proxies and FFI APIs.
 
 **[Documentation](https://webreflection.github.io/js-proxy/)**
 
+- - -
+
 ### Table of content
 
-  * [API](#api) that describes the default exported utility
-  * [jsProxy](#jsproxy) that describes the namespace returned by the utility
-  * [Heap](#heap) that describes what `js-proxy/heap` exports as extra utility
+  * **[API](#api)** that describes the default exported utility
+  * **[jsProxy](#jsproxy)** that describes the namespace returned by the utility
+  * **[Heap](#heap)** that describes what `js-proxy/heap` exports as extra utility
 
 ## API
 
