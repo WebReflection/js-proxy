@@ -305,9 +305,9 @@ The [MITM](https://en.wikipedia.org/wiki/Man-in-the-middle_attack) utility puts 
 
   * DOM operations are not allowed with proxies
   * `typeof` or `isArray` or anything else drilling the proxied type might reveal the proxy or fail
-  * references need to be proxied before others can consume these, as opposite of hook any extra feature/utility/observability without requiring 3rd party to change their reference to the real target
+  * references need to be proxied before others can consume these, as opposite of hooking any extra feature/utility/observability without requiring 3rd party to change their reference to the real target
 
-Accordingly, the *MITM* export allows anything to have a proxy between its reference and its prototype, which requires extra careful handling, but it can summarized as such:
+Accordingly, the *MITM* export allows anything to have a proxy between its reference and its prototype, which requires extra careful handling, but it can be summarized as such:
 
 ```js
 import mitm from 'js-proxy/mitm';
