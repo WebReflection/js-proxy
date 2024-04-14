@@ -32,6 +32,10 @@
       "import": "./esm/heap.js",
       "default": "./cjs/heap.js"
     },
+    "./mitm": {
+      "import": "./esm/mitm.js",
+      "default": "./cjs/mitm.js"
+    },
     "./traps": {
       "import": "./esm/traps.js",
       "default": "./cjs/traps.js"

@@ -12,6 +12,7 @@ The "*one-stop shop*" solution for JS Proxies and FFI APIs.
 
   * **[API](#api)** that describes the default exported utility
   * **[jsProxy](#jsproxy)** that describes the namespace returned by the utility
+  * **[MITM](#mitm)** that describes what `js-proxy/mitm` exports as extra utility
   * **[Heap](#heap)** that describes what `js-proxy/heap` exports as extra utility
   * **[Traps](#traps)** that describes what `js-proxy/traps` exports
   * **[Types](#types)** that describes what `js-proxy/types` exports
@@ -296,6 +297,47 @@ valueOf(object) === 123;
 valueOf(direct) === array;
 valueOf(unknown) === unknown;
 ```
+
+
+## MITM
+
+The [MITM](https://en.wikipedia.org/wiki/Man-in-the-middle_attack) utility puts a proxy handler behind the reference and not upfront. Usually, proxies are transparent until they are not:
+
+  * DOM operations are not allowed with proxies
+  * `typeof` or `isArray` or anything else drilling the proxied type might reveal the proxy or fail
+  * references need to be proxied before others can consume these, as opposite of hook any extra feature/utility/observability without requiring 3rd party to change their reference to the real target
+
+Accordingly, the *MITM* export allows anything to have a proxy between its reference and its prototype, which requires extra careful handling, but it can summarized as such:
+
+```js
+import mitm from 'js-proxy/mitm';
+
+// generic DOM handler for text property
+const textHandler = {
+  get(__proto__, name, target) {
+    if (name === 'text')
+      return target.textContent;
+    return Reflect.get(__proto__, name, target);
+  },
+  set(__proto__, name, value, target) {
+    if (name === 'text') {
+      target.textContent = value;
+      return true;
+    }
+    return Reflect.set(__proto__, name, value, target);
+  }
+};
+
+// pollute (once) any DOM node
+mitm(document.body, textHandler);
+
+// see magic
+document.body.text = 'Hello MITM';
+document.body.text; // 'Hello MITM'
+```
+
+The rule of thumb for *MITM* is that last come is the first to intercept but it's possible to add multiple *MITM* although performance will degrade proportionally as more logic will be involved per each property.
+
 
 ## Heap
 

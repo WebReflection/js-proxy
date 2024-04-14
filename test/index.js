@@ -1,6 +1,7 @@
 import define from '../esm/index.js';
 import { assert, collect } from './utils.js';
 import './heap.js';
+import './mitm.js';
 
 // 🦄 typeOf coverage related
 let { proxy, release, typeOf, valueOf } = define({
