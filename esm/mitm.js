@@ -19,11 +19,10 @@ const set = (handlers, handler) => {
  */
 const mitm = (target, handler) => {
   const ws = handlers.get(handler) || set(handlers, handler);
-  if (!ws.has(target)) {
-    ws.add(target);
-    setPrototypeOf(target, new Proxy(getPrototypeOf(target), handler));
-  }
-  return target;
+  return ws.has(target) ? target : (
+    ws.add(target),
+    setPrototypeOf(target, new Proxy(getPrototypeOf(target), handler))
+  );
 };
 
 export default mitm;
