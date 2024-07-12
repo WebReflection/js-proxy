@@ -75,7 +75,7 @@ export default namespace => {
     proxy,
     release,
     typeOf: typeOfFor(typesOf),
-    valueOf: value => (value[direct] || value.valueOf()),
+    valueOf: value => (value[direct] ?? value.valueOf()),
   };
   for (const type of ownKeys(namespace)) {
     if (hasOwn(utils, type)) continue;
