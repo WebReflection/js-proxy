@@ -71,6 +71,10 @@ export default namespace => {
   const typesOf = new WeakMap;
   const direct = Symbol();
   const proxy = {};
+  const set = (p, type) => {
+    typesOf.set(p, type);
+    return p;
+  };
   const utils = {
     proxy,
     release,
@@ -87,7 +91,7 @@ export default namespace => {
             return value.call(this, $, ..._);
           }
         }));
-        proxy[type] = ($, ..._) => JSProxy($, [ $ ], handler, ..._);
+        proxy[type] = ($, ..._) => set(JSProxy($, [ $ ], handler, ..._), ARRAY);
         break;
       }
       case FUNCTION: {
@@ -96,7 +100,7 @@ export default namespace => {
             return value.call(this, $(), ..._);
           }
         }));
-        proxy[type] = ($, ..._) => JSProxy($, bound($), handler, ..._);
+        proxy[type] = ($, ..._) => set(JSProxy($, bound($), handler, ..._), FUNCTION);
         break;
       }
       case OBJECT: {
@@ -105,18 +109,14 @@ export default namespace => {
             return value.call(this, $, ..._);
           }
         }));
-        proxy[type] = ($, ..._) => JSProxy($, { $ }, handler, ..._);
+        proxy[type] = ($, ..._) => set(JSProxy($, { $ }, handler, ..._), OBJECT);
         break;
       }
       default: {
         const handler = extendHandler(traps, type, direct, value => ({
           value
         }));
-        proxy[type] = ($, ..._) => {
-          const p = JSProxy($, $, handler, ..._);
-          typesOf.set(p, type);
-          return p;
-        };
+        proxy[type] = ($, ..._) => set(JSProxy($, $, handler, ..._), type);
         break;
       }
     }
