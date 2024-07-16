@@ -1,6 +1,6 @@
 {
   "name": "js-proxy",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "The one-stop shop solution for JS Proxies and FFI APIs",
   "main": "./cjs/index.js",
   "scripts": {
