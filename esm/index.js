@@ -77,8 +77,10 @@ export default namespace => {
   };
   const utils = {
     proxy,
+    wrapOf,
     release,
     typeOf: typeOfFor(typesOf),
+    isProxy: value => typesOf.has(value),
     valueOf: value => (value[direct] ?? value.valueOf()),
   };
   for (const type of ownKeys(namespace)) {
