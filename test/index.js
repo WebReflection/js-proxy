@@ -140,4 +140,6 @@ assert(valueOf(h), 'anything-really');
 h = null;
 await collect();
 assert(i, 3);
+proxy.object(null);
+proxy.object(void 0);
 console.log('OK');

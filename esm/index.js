@@ -42,8 +42,8 @@ const JSProxy = ($, target, handler, token = $) => {
   if (token === $) {
     switch (typeof $) {
       case OBJECT:
-      case FUNCTION:
-      case UNDEFINED: break;
+      case UNDEFINED: if (!token) token = false;
+      case FUNCTION: break;
       default: {
         token = false;
         if (target === $) target = Object($);
