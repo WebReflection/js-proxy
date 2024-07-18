@@ -4,7 +4,7 @@ import './heap.js';
 import './mitm.js';
 
 // 🦄 typeOf coverage related
-let { proxy, release, typeOf, valueOf } = define({
+let { proxy, release, pair, typeOf, valueOf } = define({
   // native cases
   array: {},
   function: {},
@@ -33,12 +33,18 @@ let { proxy, release, typeOf, valueOf } = define({
 });
 
 // typeOf native cases
+assert(pair('a').join('-'), 'string-a');
+assert(pair(null).join('-'), 'null-');
+assert(pair(void 0).join('-'), 'undefined-');
 assert(typeOf([]), 'array');
 assert(typeOf(proxy.array(0)), 'array');
+assert(pair(proxy.array(0)).join('-'), 'array-0');
 assert(typeOf(()=>{}), 'function');
 assert(typeOf(proxy.function(0)), 'function');
+assert(pair(proxy.function(0)).join('-'), 'function-0');
 assert(typeOf({}), 'object');
 assert(typeOf(proxy.object(0)), 'object');
+assert(pair(proxy.object(0)).join('-'), 'object-0');
 assert(valueOf(proxy.object({})).toString(), '[object Object]');
 
 // typeOf extra primitives

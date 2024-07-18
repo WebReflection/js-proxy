@@ -55,14 +55,32 @@ const JSProxy = ($, target, handler, token = $) => {
   return destruct ? create($, destruct, { token, return: p }) : p;
 };
 
+const asArrayType = value => (isArray(value) ? ARRAY : OBJECT);
+
 const typeOfFor = typesOf => value => {
   const type = typeof value;
   return type === OBJECT ?
     (value ?
-      (typesOf.get(value) || (isArray(value) ? ARRAY : OBJECT)) :
+      (typesOf.get(value)?.[0] ?? asArrayType(value)) :
       NULL
     ) :
     type;
+};
+
+const pairFor = typesOf => value => {
+  let type = typeof value;
+  switch (type) {
+    case OBJECT:
+      if (!value) {
+        type = NULL;
+        break;
+      }
+    case FUNCTION:
+      const t = typesOf.get(value);
+      if (t) [type, value] = t;
+      break;
+  }
+  return [type, value];
 };
 
 const release = token => (drop(token), token);
@@ -71,14 +89,14 @@ export default namespace => {
   const typesOf = new WeakMap;
   const direct = Symbol();
   const proxy = {};
-  const set = (p, type) => {
-    typesOf.set(p, type);
+  const set = (p, type, value) => {
+    typesOf.set(p, [type, value]);
     return p;
   };
   const utils = {
     proxy,
-    wrapOf,
     release,
+    pair: pairFor(typesOf),
     typeOf: typeOfFor(typesOf),
     isProxy: value => typesOf.has(value),
     valueOf: value => (value[direct] ?? value.valueOf()),
@@ -93,7 +111,7 @@ export default namespace => {
             return value.call(this, $, ..._);
           }
         }));
-        proxy[type] = ($, ..._) => set(JSProxy($, [ $ ], handler, ..._), ARRAY);
+        proxy[type] = ($, ..._) => set(JSProxy($, [ $ ], handler, ..._), ARRAY, $);
         break;
       }
       case FUNCTION: {
@@ -102,7 +120,7 @@ export default namespace => {
             return value.call(this, $(), ..._);
           }
         }));
-        proxy[type] = ($, ..._) => set(JSProxy($, bound($), handler, ..._), FUNCTION);
+        proxy[type] = ($, ..._) => set(JSProxy($, bound($), handler, ..._), FUNCTION, $);
         break;
       }
       case OBJECT: {
@@ -111,14 +129,14 @@ export default namespace => {
             return value.call(this, $, ..._);
           }
         }));
-        proxy[type] = ($, ..._) => set(JSProxy($, { $ }, handler, ..._), OBJECT);
+        proxy[type] = ($, ..._) => set(JSProxy($, { $ }, handler, ..._), OBJECT, $);
         break;
       }
       default: {
         const handler = extendHandler(traps, type, direct, value => ({
           value
         }));
-        proxy[type] = ($, ..._) => set(JSProxy($, $, handler, ..._), type);
+        proxy[type] = ($, ..._) => set(JSProxy($, $, handler, ..._), type, $);
         break;
       }
     }
