@@ -49,5 +49,13 @@
   "dependencies": {
     "gc-hook": "^0.3.1",
     "proxy-target": "^3.0.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WebReflection/js-proxy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WebReflection/js-proxy/issues"
+  },
+  "homepage": "https://github.com/WebReflection/js-proxy#readme"
 }
