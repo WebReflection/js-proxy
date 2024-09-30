@@ -1,4 +1,4 @@
-import { drop, get, hold } from '../esm/heap.js';
+import { clear, drop, get, hold } from '../esm/heap.js';
 import { assert, collect } from './utils.js';
 
 let o = {};
@@ -25,3 +25,7 @@ assert(id !== hold(o), true);
 assert(drop(o), true);
 assert(drop(o), false);
 assert(drop(id), false);
+
+hold(o);
+clear();
+assert(drop(o), false);

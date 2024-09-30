@@ -6,6 +6,14 @@ export const create = () => {
   let uid = 0;
   return {
     /**
+     * Clear all references retained in the current heap.
+     */
+    clear: () => {
+      ids.clear();
+      values.clear();
+    },
+
+    /**
      * Remove by id or value any previously stored reference.
      * @param {number | unknown} id the held value by id or the value itself.
      * @returns {boolean} `true` if the operation was successful, `false` otherwise.
@@ -48,5 +56,5 @@ export const create = () => {
 };
 
 // globally shared heap
-const { drop, get, hold } = create();
-export { drop, get, hold };
+const { clear, drop, get, hold } = create();
+export { clear, drop, get, hold };
