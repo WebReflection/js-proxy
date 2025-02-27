@@ -19,7 +19,7 @@
   "license": "MIT",
   "devDependencies": {
     "ascjs": "^6.0.3",
-    "c8": "^10.1.2"
+    "c8": "^10.1.3"
   },
   "module": "./esm/index.js",
   "type": "module",
@@ -47,7 +47,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "gc-hook": "^0.3.1",
+    "gc-hook": "^0.4.1",
     "proxy-target": "^3.0.2"
   },
   "repository": {
